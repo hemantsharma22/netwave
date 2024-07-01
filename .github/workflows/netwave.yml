@@ -1,0 +1,60 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Install rsync
+        run: sudo apt-get install -y rsync
+
+      - name: Copy files via SSH
+        env:
+          RSYNC_RSH: "ssh -o StrictHostKeyChecking=no"
+        run: |
+          # Ensure the known_hosts file is populated to avoid SSH prompts
+          mkdir -p ~/.ssh
+          ssh-keyscan 192.168.168.29 >> ~/.ssh/known_hosts
+
+          rsync -avz --delete --exclude='.git' \
+            --exclude='bin' \
+            --exclude='dev' \
+            --exclude='generated' \
+            --exclude='lib' \
+            --exclude='phpserver' \
+            --exclude='pub' \
+            --exclude='setup' \
+            --exclude='var' \
+            --exclude='vender' \
+            --exclude='.editorconfig' \
+            --exclude='.gitignore' \
+            --exclude='.htaccess' \
+            --exclude='.htaccess.sample' \
+            --exclude='.php-cs-fixer.dist.php' \
+            --exclude='.user.ini' \
+            --exclude='CHANGELOG.md' \
+            --exclude='COPYING.txt' \
+            --exclude='Gruntfile.js.sample' \
+            --exclude='LICENSE.txt' \
+            --exclude='LICENSE_AFL.txt' \
+            --exclude='SECURITY.md' \
+            --exclude='auth.json.sample' \
+            --exclude='composer.json' \
+            --exclude='composer.lock' \
+            --exclude='grunt-config.json.sample' \
+            --exclude='nginx.conf.sample' \
+            --exclude='package.json.sample' \
+            ./ server29@192.168.168.29:/var/www/html/hemant/app
